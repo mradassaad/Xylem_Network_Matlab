@@ -798,7 +798,7 @@ classdef XylemNet < handle
             %             shiftLPP = floor(edgesLPP(1)/widthLPP);
             %Accounts for when the first edge is a multiple>2 larger than
             %the width
-            figure
+%             figure
             %             colors_LPP = colormap(cool(lengthLPP));
             %             colors_CD = colormap(gray(lengthCD));
             ax = axes;

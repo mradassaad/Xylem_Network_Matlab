@@ -1,5 +1,5 @@
-rowNb = 100;
-colNb = 1000;
+rowNb = 50;
+colNb = 50;
 Pe = 0.91;
 NPe = 0.87;
 Pc = 0.5;
@@ -8,8 +8,8 @@ Dc = 24.6e-6;
 Dc_cv = 0.12;
 Dp = 32.0e-9;
 Dm = 6.3e-6;
-A = 20.5;
-B = 3.2;
+A = 16;
+B = 4;
 fc = 0.31;
 fpf = 0.7;
 fap = 0.06;
@@ -19,8 +19,5 @@ Tm = 234e-9;
 Lp = 654e-9;
 ASPcalcmethod = 'Pore';
 
-AGgsim = XylemNet.empty;
-for i = 1:1
-    AGgsim(i) = XylemNet(rowNb,colNb,Pe,NPe,Pc,Lce,Dc,Dc_cv,Dp,Dm,A,B,fc,fpf,fap,...
+    sim = XylemNet(rowNb,colNb,Pe,NPe,Pc,Lce,Dc,Dc_cv,Dp,Dm,A,B,fc,fpf,fap,...
         e_mean,e_cv,Tm,Lp,ASPcalcmethod);
-end
