@@ -24,7 +24,6 @@ classdef Conduit < handle
     
     properties (SetAccess = private)
         CECount
-        %Physical properties
         Length
         Lce
     end
