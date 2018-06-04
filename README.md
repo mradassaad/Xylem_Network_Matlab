@@ -33,6 +33,6 @@ There are two scripts a user may use to take advantage of the model without know
   - **e_cv**: coefficient of variation of pit membrane strain at cavitation.
   - **Tm**: pit membrane thickness.
   - **Lp**: pit chamber depth.
-  - **BPPcalcmethod**: BPP calculation method (either <p style="color:DodgerBlue;">'Pore'</p> or <p style="color:DodgerBlue;">'Stretching'</p>)
+  - **BPPcalcmethod**: BPP calculation method (either <font color="blue">'Pore'</font> or <font color="blue">Stretching'</font>)
 
 - [VCGen.m](https://github.com/mradassaad/Xylem_Network_Matlab/blob/master/VCGen.m) allows you to compute the vulnerability curve associated with the generated xylem network.
