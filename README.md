@@ -7,7 +7,7 @@ The Xylem Network model first builds a xylem network (XN) of random topology. To
 
 The model can then generate Vulnerability Curves (VCs) and extract hydraulic properties of the generated XN. Below is a figure illustrating how emboli propagate through the xylem as the pressure difference between the water and the atmosphere (![alt text][DP]) increases.
 
-![alt text][cav_gif]
+<div style="text-align:center">![alt text][cav_gif]<\div>
 
 ## Classes
 This Matlab code is designed as a model to explore how water or emboli propagate throughout a flowering plant xylem tissue. This code is based on Object Oriented Programming (OOP) capabilities of Matlab. There are five objects that interact in this model:
