@@ -51,5 +51,14 @@ There are two scripts a user may use to take advantage of the model without know
 - [VCGen.m](https://github.com/mradassaad/Xylem_Network_Matlab/blob/master/VCGen.m) allows you to compute the vulnerability curve associated with the generated xylem network. You can control the behavior of VCGen with the following parameters: 
 
 
+## Example
+
+We start off by creating a random xylem network and visualizing it. We set the input parameters so that anatomical characters match measurements of Acer negundo tissues.
+
+```matlab
+XylemNetIni.m
+sim.visualize
+```
+
 [DP]: http://www.sciweavers.org/tex2img.php?eq=%5CDelta%20P&bc=White&fc=Black&im=jpg&fs=12&ff=arev&edit=0
 [cav_gif]: https://github.com/mradassaad/Xylem_Network_Matlab/blob/master/Images/cav_gif.gif

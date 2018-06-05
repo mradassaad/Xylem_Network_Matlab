@@ -785,7 +785,7 @@ classdef XylemNet < handle
 %             highlight(pConHyd,obj.GConOut,'NodeColor','r','MarkerSize',5)
 %         end
         
-        function plotNet(obj)
+        function visualize(obj)
             % create a default color map ranging from red to light pink for
             % LPP
             %             [~,edgesCD,~] = histcounts([obj.Conduits.Diameter].*10^6);
