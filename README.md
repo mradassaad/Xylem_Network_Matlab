@@ -59,6 +59,8 @@ We start off by creating a random xylem network and visualizing it. We set the i
 XylemNetIni.m
 sim.visualize
 ```
+![alt text][viz]
 
 [DP]: http://www.sciweavers.org/tex2img.php?eq=%5CDelta%20P&bc=White&fc=Black&im=jpg&fs=12&ff=arev&edit=0
 [cav_gif]: https://github.com/mradassaad/Xylem_Network_Matlab/blob/master/Images/cav_gif.gif
+[viz]: https://github.com/mradassaad/Xylem_Network_Matlab/blob/master/Images/visualize.png
