@@ -1,5 +1,5 @@
-rowNb = 50;
-colNb = 50;
+rowNb = 100;
+colNb = 1000;
 Pe = 0.91;
 NPe = 0.87;
 Pc = 0.5;
