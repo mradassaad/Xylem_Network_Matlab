@@ -36,174 +36,181 @@ classdef XylemNet < handle
         function obj = XylemNet(row,column,Pe,NPe,Pc,Lce,Dc,Dc_cv,varargin)
             %Class constructor
             
-            %Case where there is no input
-            if nargin == 0
-                obj.Conduits = Conduit.empty;
-                obj.Size = 0;
-                obj.ICConnections = EndWall.empty;
-                
-            elseif nargin > 0
-                %Parse required inputs
-                
-                %expectedConduitSchemes:
-                %1 - Random diameter assignment
-                %2 - Assign diameters in ranks
-                %expectedEndWallSchemes:
-                %1 - Takes as inputs Dp,Dp_cv,Fc,Fpf
-                reqInputs = inputParser;
-                validPosNum = @(x) isnumeric(x) && all(x > 0);
-                addRequired(reqInputs,'row',@(x) validPosNum(x));
-                addRequired(reqInputs,'column',@(x) validPosNum(x));
-                addRequired(reqInputs,'Pe',@(x) validPosNum(x) ...
-                    && x<=1);
-                addRequired(reqInputs,'NPe',@(x) validPosNum(x) ...
-                    && x<=1);
-                addRequired(reqInputs,'Pc',@(x) validPosNum(x) ...
-                    && isscalar(x) && x<=1);
-                addRequired(reqInputs,'Lce',@(x) validPosNum(x)); %meters
-                addRequired(reqInputs,'Dc',@(x) validPosNum(x) ...
-                    && isscalar(x) && x<200e-6 && x>1e-6); %meters
-                addRequired(reqInputs,'Dc_cv',@(x) validPosNum(x) ...
-                    && isscalar(x));
-                parse(reqInputs,row,column,Pe,NPe,Pc,Lce,Dc,Dc_cv);
-                
-                obj.Size = [row column];
-                obj.Pc = Pc;
-                obj.Pe = Pe;
-                obj.NPe = NPe;
-                
-                %Parse optional inputs
-                optInputs = inputParser;
-                addRequired(optInputs,'Dp',@(x) validPosNum(x) ...
-                    && isscalar(x) && x<200e-9 && x>1e-10); %meters
-                addRequired(optInputs,'Dm',@(x) validPosNum(x) ...
-                    && isscalar(x) && x<200e-6 && x>1e-7); %meters
-                addRequired(optInputs,'k_ASP',@(x) validPosNum(x) ...
-                    && isscalar(x));
-                addRequired(optInputs,'lam_ASP',@(x) validPosNum(x) ...
-                    && isscalar(x));
-                addRequired(optInputs,'Fc',@(x) validPosNum(x) ...
-                    && isscalar(x) && x<=1);
-                addRequired(optInputs,'Fpf',@(x) validPosNum(x) ...
-                    && isscalar(x) && x<=1);
-                addRequired(optInputs,'Fap',@(x) validPosNum(x) ...
-                    && isscalar(x) && x<=1);
-                addRequired(optInputs,'e_mean',@(x) validPosNum(x) ...
-                    && isscalar(x));
-                addRequired(optInputs,'e_cv',@(x) validPosNum(x) ...
-                    && isscalar(x));
-                addRequired(optInputs,'Tm',@(x) validPosNum(x) ...
-                    && isscalar(x)); %meters
-                addRequired(optInputs,'Lp',@(x) validPosNum(x) ...
-                    && isscalar(x)); %meters
-                addRequired(optInputs,'ASPcalcmethod',@(x) ischar(x));
-                parse(optInputs,varargin{:});
-                
-                Dp = optInputs.Results.Dp;
-                Dm = optInputs.Results.Dm;
-                k_ASP = optInputs.Results.k_ASP;
-                lam_ASP = optInputs.Results.lam_ASP;
-                Fc = optInputs.Results.Fc;
-                Fpf = optInputs.Results.Fpf;
-                Fap = optInputs.Results.Fap;
-                e_mean = optInputs.Results.e_mean;
-                e_cv = optInputs.Results.e_cv;
-                Tm = optInputs.Results.Tm;
-                Lp = optInputs.Results.Lp;
-                ASPcalcmethod = optInputs.Results.ASPcalcmethod;
-                %Generate Conduits with constant conduit element length
-                [obj.Conduits,obj.ConSorted,obj.CBProw,obj.CBPcol] =...
-                    generateConduits(obj.Size,Lce,obj.Pe,obj.NPe);
-                
-                %Generate ICCs and add to corresponding conduits
-                %First determine potential connections defined as any two
-                %adjacent nodes that are part of different conduits 
-                potConx = findConx(obj.Conduits,obj.Size(1));
-                %Choose potential connections randomly depending on
-                %prescribed probability Pc
-                pickedConx = pickConx(potConx,obj.Pc);
-                %Save that array in case we need to create a new xylem
-                %network with the same ICC positions
-                obj.pickedConx = pickedConx;
-                %With the chosen adjacent nodes, create ICC objects
-                [obj.ICConnections,obj.Clusters] = ...
-                    generateICCs(obj,Dp,Dm,k_ASP,lam_ASP,Fc,Fpf,Fap,Tm,Lp,...
-                    ASPcalcmethod);
-                %updateConduits is a XylemNet method that deletes all
-                %conduits that aren't part of any cluster and are therefore
-                %not useful for the overall hydraulic pathway of the
-                %segment
-                obj.updateConduits();
-                if isempty(obj.ICConnections)
-                    disp('No Network')
-                    return
-                end
-                
-                Dstd=Dc_cv*Dc; %m
-                Dm=log(Dc^2/sqrt(Dstd^2+Dc^2));
-                Ds=sqrt(log(Dstd^2/(Dc^2)+1));
-                Dcs=lognrnd(Dm,Ds,1,length(obj.Conduits));
-                Dcs=sort(Dcs);
-                tempLen=[obj.Conduits.Length];
-                [~,ILen]=sort(tempLen);
-                fn = DcMapping(length(obj.Conduits),...
-                    floor(length(obj.Conduits)/20));
-                for k=1:length(obj.Conduits)
-                    obj.Conduits(k).updateDiameter(...
-                        Dcs(fn(ILen==k)));
-                end
-                
-                for i=1:length(obj.ConSorted)
-                    if isa(obj.ConSorted{i},'Conduit')
-                        obj.ConSorted{i}=obj.ConSorted{i}(isvalid(obj.ConSorted{i}));
-                    end
-                end
-                for i=1:length(obj.Conduits)
-                    obj.Conduits(i).addConConduits;
-                    obj.Conduits(i).updateConduit;
-                end
-
-                for i=1:length(obj.ICConnections)
-                    obj.ICConnections(i).updateMeanArea;
-                end
-                
-                es = sort(abs(normrnd(e_mean,e_cv*e_mean,...
-                    1,length(obj.ICConnections))));
-                [~,I] = sort([obj.ICConnections.Am]);
-                for i=1:length(obj.ICConnections)
-                    obj.ICConnections(i).computeKmASP(es(I==i));
-                end
-                
-                for i=1:length(obj.Clusters)
-                    obj.Clusters(i).updateColumns;
-                end
-                for i=1:length(obj.Conduits)
-                    obj.Conduits(i).addConConduitASP;
-                end
-                
-                x=obj.Size(1):obj.Size(1):(obj.Size(2))*obj.Size(1);
-                obj.Kend=zeros(1,obj.Size(2));
-                obj.Aend=zeros(1,obj.Size(2));
-                for i=1:length(obj.Kend)
-                    temp=obj.getConduits(x(i));
-                    if ~isempty(temp)
-                        obj.Kend(i)=temp.Kce;
-                        obj.Aend(i) = pi.*(temp.Diameter./2).^2;
-                    end
-                end
-                firstOINodes = [obj.Conduits.firstOINode];
-                lastOINodes = [obj.Conduits.lastOINode];
-                OINodes = [firstOINodes;lastOINodes];
-                OINodes = OINodes(:);
-                [obj.CBProw,obj.CBPcol]=ind2sub(obj.Size,OINodes);
-                if length(obj.ICConnections)>1
-                    obj.pickedConx={obj.ICConnections.Nodes};
-                end
-                
-                %Cross sectional area of conduits at 4 cross sections
-                obj.Dcross =...
-                    [obj.getD(1); obj.getD(2); obj.getD(3); obj.getD(4)];
+            %Parse required inputs
+            
+            %expectedConduitSchemes:
+            %1 - Random diameter assignment
+            %2 - Assign diameters in ranks
+            %expectedEndWallSchemes:
+            %1 - Takes as inputs Dp,Dp_cv,Fc,Fpf
+            reqInputs = inputParser;
+            validPosNum = @(x) isnumeric(x) && all(x > 0);
+            addRequired(reqInputs,'row',@(x) validPosNum(x));
+            addRequired(reqInputs,'column',@(x) validPosNum(x));
+            addRequired(reqInputs,'Pe',@(x) validPosNum(x) ...
+                && x<=1);
+            addRequired(reqInputs,'NPe',@(x) validPosNum(x) ...
+                && x<=1);
+            addRequired(reqInputs,'Pc',@(x) validPosNum(x) ...
+                && isscalar(x) && x<=1);
+            addRequired(reqInputs,'Lce',@(x) validPosNum(x)); %meters
+            addRequired(reqInputs,'Dc',@(x) validPosNum(x) ...
+                && isscalar(x) && x<200e-6 && x>1e-6); %meters
+            addRequired(reqInputs,'Dc_cv',@(x) validPosNum(x) ...
+                && isscalar(x));
+            parse(reqInputs,row,column,Pe,NPe,Pc,Lce,Dc,Dc_cv);
+            
+            obj.Size = [row column];
+            obj.Pc = Pc;
+            obj.Pe = Pe;
+            obj.NPe = NPe;
+            
+            %Parse optional inputs
+            optInputs = inputParser;
+            addRequired(optInputs,'Dp',@(x) validPosNum(x) ...
+                && isscalar(x) && x<200e-9 && x>1e-10); %meters
+            addRequired(optInputs,'Dm',@(x) validPosNum(x) ...
+                && isscalar(x) && x<200e-6 && x>1e-7); %meters
+            addRequired(optInputs,'k_ASP',@(x) validPosNum(x) ...
+                && isscalar(x));
+            addRequired(optInputs,'lam_ASP',@(x) validPosNum(x) ...
+                && isscalar(x));
+            addRequired(optInputs,'Fc',@(x) validPosNum(x) ...
+                && isscalar(x) && x<=1);
+            addRequired(optInputs,'Fpf',@(x) validPosNum(x) ...
+                && isscalar(x) && x<=1);
+            addRequired(optInputs,'Fap',@(x) validPosNum(x) ...
+                && isscalar(x) && x<=1);
+            addRequired(optInputs,'e_mean',@(x) validPosNum(x) ...
+                && isscalar(x));
+            addRequired(optInputs,'e_cv',@(x) validPosNum(x) ...
+                && isscalar(x));
+            addRequired(optInputs,'Tm',@(x) validPosNum(x) ...
+                && isscalar(x)); %meters
+            addRequired(optInputs,'Lp',@(x) validPosNum(x) ...
+                && isscalar(x)); %meters
+            addRequired(optInputs,'ASPcalcmethod',@(x) ischar(x));
+            parse(optInputs,varargin{:});
+            
+            Dp = optInputs.Results.Dp;
+            Dm = optInputs.Results.Dm;
+            k_ASP = optInputs.Results.k_ASP;
+            lam_ASP = optInputs.Results.lam_ASP;
+            Fc = optInputs.Results.Fc;
+            Fpf = optInputs.Results.Fpf;
+            Fap = optInputs.Results.Fap;
+            e_mean = optInputs.Results.e_mean;
+            e_cv = optInputs.Results.e_cv;
+            Tm = optInputs.Results.Tm;
+            Lp = optInputs.Results.Lp;
+            ASPcalcmethod = optInputs.Results.ASPcalcmethod;
+            %Generate Conduits with constant conduit element length
+            [obj.Conduits,obj.ConSorted,obj.CBProw,obj.CBPcol] =...
+                generateConduits(obj.Size,Lce,obj.Pe,obj.NPe);
+            
+            %Generate ICCs and add to corresponding conduits
+            %First determine potential connections defined as any two
+            %adjacent nodes that are part of different conduits
+            potConx = findConx(obj.Conduits,obj.Size(1));
+            %Choose potential connections randomly depending on
+            %prescribed probability Pc
+            pickedConx = pickConx(potConx,obj.Pc);
+            %Save that array in case we need to create a new xylem
+            %network with the same ICC positions
+            obj.pickedConx = pickedConx;
+            %With the chosen adjacent nodes, create ICC objects
+            [obj.ICConnections,obj.Clusters] = ...
+                generateICCs(obj,Dp,Dm,k_ASP,lam_ASP,Fc,Fpf,Fap,Tm,Lp,...
+                ASPcalcmethod);
+            %updateConduits is a XylemNet method that deletes all
+            %conduits that aren't part of any cluster and are therefore
+            %not useful for the overall hydraulic pathway of the
+            %segment
+            obj.updateConduits();
+            if isempty(obj.ICConnections)
+                disp('No Network')
+                return
             end
+            
+            %Sample conduit diameters from lognormal distribution
+            Dstd=Dc_cv*Dc; %m
+            Dm=log(Dc^2/sqrt(Dstd^2+Dc^2));
+            Ds=sqrt(log(Dstd^2/(Dc^2)+1));
+            Dcs=lognrnd(Dm,Ds,1,length(obj.Conduits));
+            Dcs=sort(Dcs);
+            tempLen=[obj.Conduits.Length];
+            [~,ILen]=sort(tempLen);
+            fn = DcMapping(length(obj.Conduits),...
+                floor(length(obj.Conduits)/20));
+            %Coordinate conduit diameter and length: n^th longest conduit
+            %gets to be the n^th widest
+            for k=1:length(obj.Conduits)
+                obj.Conduits(k).updateDiameter(...
+                    Dcs(fn(ILen==k)));
+            end
+            
+            %Sort conduits according to their column positions for faster
+            %searching
+            for i=1:length(obj.ConSorted)
+                if isa(obj.ConSorted{i},'Conduit')
+                    obj.ConSorted{i} =...
+                        obj.ConSorted{i}(isvalid(obj.ConSorted{i}));
+                end
+            end
+            %Figure out ID of connected conduits and statistics such as
+            %number of connected conduits
+            for i=1:length(obj.Conduits)
+                obj.Conduits(i).addConConduits;
+                obj.Conduits(i).updateConduit;
+            end
+            %Now area can be calculated and then conductance and similar
+            %properties
+            for i=1:length(obj.ICConnections)
+                obj.ICConnections(i).updateMeanArea;
+            end
+            
+            %Sample membrane stretching at air seeding (e) from a normal
+            %distribution
+            es = sort(abs(normrnd(e_mean,e_cv*e_mean,...
+                1,length(obj.ICConnections))));
+            %Distribute e according to ICC area and compute properties
+            [~,I] = sort([obj.ICConnections.Am]);
+            for i=1:length(obj.ICConnections)
+                obj.ICConnections(i).computeKmASP(es(I==i));
+            end
+            %Update column span of every cluster
+            for i=1:length(obj.Clusters)
+                obj.Clusters(i).updateColumns;
+            end
+            %Figure out the minimum ASP with every connected conduit
+            for i=1:length(obj.Conduits)
+                obj.Conduits(i).addConConduitASP;
+            end
+            
+            %Save organ border area and conductivity
+            x=obj.Size(1):obj.Size(1):(obj.Size(2))*obj.Size(1);
+            obj.Kend=zeros(1,obj.Size(2));
+            obj.Aend=zeros(1,obj.Size(2));
+            for i=1:length(obj.Kend)
+                temp=obj.getConduits(x(i));
+                if ~isempty(temp)
+                    obj.Kend(i)=temp.Kce;
+                    obj.Aend(i) = pi.*(temp.Diameter./2).^2;
+                end
+            end
+            firstOINodes = [obj.Conduits.firstOINode];
+            lastOINodes = [obj.Conduits.lastOINode];
+            OINodes = [firstOINodes;lastOINodes];
+            OINodes = OINodes(:);
+            [obj.CBProw,obj.CBPcol]=ind2sub(obj.Size,OINodes);
+            if length(obj.ICConnections)>1
+                obj.pickedConx={obj.ICConnections.Nodes};
+            end
+            
+            %Cross sectional area of conduits at 4 cross sections
+            obj.Dcross =...
+                [obj.getD(1); obj.getD(2); obj.getD(3); obj.getD(4)];
+            
             
         end
         
@@ -413,11 +420,11 @@ classdef XylemNet < handle
             obj.Clusters=obj.Clusters(isvalid(obj.Clusters));
             
             for i=1:length(obj.Conduits)
-                    obj.Conduits(i).addConConduits;
-                    obj.Conduits(i).updateConduit;
+                obj.Conduits(i).addConConduits;
+                obj.Conduits(i).updateConduit;
             end
-%             obj.plotNet    
-            prune(obj)  
+            %             obj.plotNet
+            prune(obj)
         end
         
         function [Pmatrix,singular] = getPressures(obj,Pin,Pout)
@@ -500,9 +507,9 @@ classdef XylemNet < handle
                         %below reverses it to 1
                         A(OINodes(1),OINodes(1))=-1;
                         OINodes=OINodes(2:end);
-                    %Identify whether conduit corresponding to these nodes
-                    %is an outlet. If it is then A(OINodes(1),OINodes(1))
-                    %should equal 1.
+                        %Identify whether conduit corresponding to these nodes
+                        %is an outlet. If it is then A(OINodes(1),OINodes(1))
+                        %should equal 1.
                     elseif mod(UNodes(end),obj.Size(1))==0
                         A(OINodes(end-1),OINodes(end))=-cc(i).Kce; %m^3/MPa.s
                         A(OINodes(end),OINodes(end))=-1;
@@ -723,7 +730,7 @@ classdef XylemNet < handle
                             ConductiveASP(j);
                         count=count+1;
                     end
-
+                    
                 end
             end
             Infected = Infected(1:count-1);
@@ -759,31 +766,31 @@ classdef XylemNet < handle
             TNC=length(obj.Conduits);
         end
         
-%         function plot(obj)
-%             if isempty(obj.GCE)
-%                 disp('Initializing graph')
-%                 [obj.GCE, obj.GCEXdata, obj.GCEYdata,...
-%                     obj.GConHyd, obj.GConCav, obj.GConIn, obj.GConOut]...
-%                     = createGraphs(obj);
-%             end
-%             figure;plot(obj.GCE,'Marker','none',...
-%                 'XData',obj.GCEXdata,...
-%                 'YData',obj.GCEYdata)
-%         end
-%         
-%         function plotCon(obj)
-%             if isempty(obj.GCE)
-%                 disp('Initializing graph')
-%                 [obj.GCE, obj.GCEXdata, obj.GCEYdata,...
-%                     obj.GConHyd, obj.GConCav, obj.GConIn, obj.GConOut]...
-%                     = createGraphs(obj);
-%             end
-%             figure;
-%             pConHyd = plot(obj.GConHyd,'layout','layered',...
-%                 'Sources',obj.GConIn,'Sinks',obj.GConOut);
-%             highlight(pConHyd,obj.GConIn,'NodeColor','g','MarkerSize',5)
-%             highlight(pConHyd,obj.GConOut,'NodeColor','r','MarkerSize',5)
-%         end
+        %         function plot(obj)
+        %             if isempty(obj.GCE)
+        %                 disp('Initializing graph')
+        %                 [obj.GCE, obj.GCEXdata, obj.GCEYdata,...
+        %                     obj.GConHyd, obj.GConCav, obj.GConIn, obj.GConOut]...
+        %                     = createGraphs(obj);
+        %             end
+        %             figure;plot(obj.GCE,'Marker','none',...
+        %                 'XData',obj.GCEXdata,...
+        %                 'YData',obj.GCEYdata)
+        %         end
+        %
+        %         function plotCon(obj)
+        %             if isempty(obj.GCE)
+        %                 disp('Initializing graph')
+        %                 [obj.GCE, obj.GCEXdata, obj.GCEYdata,...
+        %                     obj.GConHyd, obj.GConCav, obj.GConIn, obj.GConOut]...
+        %                     = createGraphs(obj);
+        %             end
+        %             figure;
+        %             pConHyd = plot(obj.GConHyd,'layout','layered',...
+        %                 'Sources',obj.GConIn,'Sinks',obj.GConOut);
+        %             highlight(pConHyd,obj.GConIn,'NodeColor','g','MarkerSize',5)
+        %             highlight(pConHyd,obj.GConOut,'NodeColor','r','MarkerSize',5)
+        %         end
         
         function visualize(obj)
             % create a default color map ranging from red to light pink for
@@ -798,7 +805,7 @@ classdef XylemNet < handle
             %             shiftLPP = floor(edgesLPP(1)/widthLPP);
             %Accounts for when the first edge is a multiple>2 larger than
             %the width
-%             figure
+            %             figure
             %             colors_LPP = colormap(cool(lengthLPP));
             %             colors_CD = colormap(gray(lengthCD));
             ax = axes;
