@@ -298,8 +298,8 @@ classdef XylemNet < handle
             %             Penetrated = Penetrated(1:count-2);
         end
         
-        
-        
+        %Graph approach to Xylem Net
+     %{   
         function [GCE, GCEXdata, GCEYdata, GConHyd, GConCav, GConIn...
                 , GConOut] = createGraphs(obj)
             temp = [obj.Conduits];
@@ -402,6 +402,7 @@ classdef XylemNet < handle
             GConIn = in;
             GConOut = out;
         end
+        %}
         
         function Conduits = updateConduits(obj)
             %This function removes non functional conduits, non connecting
@@ -423,7 +424,6 @@ classdef XylemNet < handle
                 obj.Conduits(i).addConConduits;
                 obj.Conduits(i).updateConduit;
             end
-            %             obj.plotNet
             prune(obj)
         end
         
