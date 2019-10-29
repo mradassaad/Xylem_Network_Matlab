@@ -299,7 +299,7 @@ classdef XylemNet < handle
         end
         
         %Graph approach to Xylem Net
-     %{   
+       
         function [GCE, GCEXdata, GCEYdata, GConHyd, GConCav, GConIn...
                 , GConOut] = createGraphs(obj)
             temp = [obj.Conduits];
@@ -321,14 +321,14 @@ classdef XylemNet < handle
                 if obj.Clusters(k).NonConducting
                     continue
                 end
-                nrows=obj.Size(1);
-                ncolumns=length(obj.Clusters(k).Columns);
-                firstColumn=obj.Clusters(k).Columns(1);
+                nrows = obj.Size(1);
+                ncolumns = length(obj.Clusters(k).Columns);
+                firstColumn = obj.Clusters(k).Columns(1);
                 un=false(1,nrows*ncolumns);
                 
                 %Fill in values where n~=m and are part of a conduit
                 
-                cc=obj.Clusters(k).Conduits(~[obj.Clusters(k).Conduits.NonConducting]);
+                cc = obj.Clusters(k).Conduits(~[obj.Clusters(k).Conduits.NonConducting]);
                 [~,I]=sort([cc.firstOINode]);
                 cc=cc(I);
                 AAHyd = zeros(length(cc));
@@ -378,10 +378,10 @@ classdef XylemNet < handle
                             AACav(ind+i,i) = AACav(i,ind+i);
                         end
                     end
-                    if cc(i).isinput
+                    if cc(i).isInlet
                         in(incount) = i+lastposCon-1; %#ok<AGROW>
                         incount = incount + 1;
-                    elseif cc(i).isoutput(obj.Size)
+                    elseif cc(i).isOutlet
                         out(outcount) = i+lastposCon-1; %#ok<AGROW>
                         outcount = outcount + 1;
                     end
@@ -402,7 +402,7 @@ classdef XylemNet < handle
             GConIn = in;
             GConOut = out;
         end
-        %}
+        
         
         function Conduits = updateConduits(obj)
             %This function removes non functional conduits, non connecting

@@ -1,9 +1,9 @@
 function [Conduits,SortedConduits,CBProw,CBPcol] =...
-    generateConduits(NetSize,Lce,Pe,NPe)
+    generateConduits(NetSize,Lce,Pc,NPc)
 
 %Probability of a node being the start\end of a conduit
-CondStart = rand(NetSize(1)+50,NetSize(2))<(1-NPe);
-CondEnd = rand(NetSize(1)+50,NetSize(2))<(1-Pe);
+CondStart = rand(NetSize(1)+50,NetSize(2))<(1-NPc);
+CondEnd = rand(NetSize(1)+50,NetSize(2))<(1-Pc);
 %Eliminate vessel number skewness toward upstream end by truncating
 tempStart = zeros(1,NetSize(2));
 for i = 1:NetSize(2)
@@ -65,6 +65,7 @@ end
 %The blueprint is useful in case we want to create a new xylem network with
 % similar conduit topology
 [CBProw,CBPcol]=find(CondSE);
+
 %Generate conduits
 Conduits=repmat(Conduit(),1,10000);
 SortedConduits=cell(1,NetSize(2));

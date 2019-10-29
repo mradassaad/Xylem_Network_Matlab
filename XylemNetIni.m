@@ -1,6 +1,6 @@
 %rowNb and colNb are respectively the number of rows and columns of the Xylem Network (XN).
 rowNb = 100;
-colNb = 1000;
+colNb = 200;
 %Pc and NPc are respectively the probability of initiating and terminating a conduit.
 %Once a conduit is initiatied, the model will keep constructing consecutive conduit elements
 %until a terminating node is reached with probability NPc.
