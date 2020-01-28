@@ -1,16 +1,17 @@
 %rowNb and colNb are respectively the number of rows and columns of the Xylem Network (XN).
-rowNb = 100;
-colNb = 200;
+rowNb = 50;
+colNb = 50;
+depNb = 10;
 %Pc and NPc are respectively the probability of initiating and terminating a conduit.
 %Once a conduit is initiatied, the model will keep constructing consecutive conduit elements
 %until a terminating node is reached with probability NPc.
 %Pc and NPc are tuned so that conduit lengths and connectivity match real measurements.
-Pc = 0.91;
-NPc = 0.87;
+Pc = 0.6;
+NPc = 0.83;
 %Pe is the probability of two horizontally adjacent nodes, forming parts of two
 %different conduits, will form a InterConduit Connection (ICC).
 %Pe is tuned so that conduit connectivity matches real measurements.
-Pe = 0.5;
+Pe = 1;
 %Lce is the length of a single conduit elements in meters
 Lce = 2.88e-3;
 %Dc is the average conduit diameter in meters
@@ -46,5 +47,5 @@ Lp = 654e-9;
 BPPcalcmethod = 'Pore';
 
 %sim will be the XylemNet object created using the parameters defined above
-sim = XylemNet(rowNb,colNb,Pc,NPc,Pe,Lce,Dc,Dc_cv,Dp,Dm,A,B,fc,fpf,fap,...
+sim = XylemNet(rowNb,colNb,depNb,Pc,NPc,Pe,Lce,Dc,Dc_cv,Dp,Dm,A,B,fc,fpf,fap,...
       e_mean,e_cv,Tm,Lp,BPPcalcmethod);

@@ -1,5 +1,5 @@
 function [PLC,RWD,Pressures,Kmax,Kini,voltot,embNb,ncNb,Embolized,Penetrated] = ...
-    cavitation_process(sim,jt,stepsize,itmax,inEmb, AvgBool)
+    cavitation_process(sim,jt,stepsize,itmax,EmbNb, AvgBool)
 %AvgBool specifies whether to average all VC iterations
 %   = 1 No averaging
 %   = 0 Averaging occurs
@@ -10,15 +10,23 @@ ncNb = zeros(jt,itmax);
 Embolized = cell(jt,itmax);
 Penetrated = cell(jt,itmax);
 RWD = zeros(jt,itmax);
+Ds = {sim.Dcross(1,:), sim.Dcross(2,:), sim.Dcross(3,:), sim.Dcross(4,:)};
 j=1;
 
 sim.RepairAll;
-[~,~,Kmax,~,~] = compute_hydraulics(sim,0.1,0);
-
+[~,~,K(:,1),~,~] = compute_hydraulics(sim.gCond,0.1,0, {sim.Dcross(1,:),...
+        sim.Dcross(2,:), sim.Dcross(3,:), sim.Dcross(4,:)});
+Kmax = K(:,1);
 while j<=jt
-
-    [K(j,1),~,Embolized{j,1},Penetrated{j,1}] =...
-        sim.AirSeed(0.1+stepsize,1:length(sim.Clusters),inEmb); 
+    gCondIt = sim.gCond;
+    gBipNodeIt = sim.gBipNode;
+    gCavIt = sim.gCav;
+    
+    compInd = 1:length(unique(conncomp(sim.gCond)));
+    [~,~,gCondIt,gBipNodeIt, gCavIt] =...
+    AirSeed(gCondIt, gBipNodeIt, gCavIt ,0.1+stepsize,compInd,EmbNb,Ds);
+%     [K(j,1),~,Embolized{j,1},Penetrated{j,1}] =...
+%         AirSeed(0.1+stepsize,1:CompNb,inEmb); 
 %     figure;
 %     sim.plotNet
 %     text(20,52,'\DeltaP=0 MPa','FontSize',14,'FontWeight','bold')
@@ -36,7 +44,9 @@ while j<=jt
     while i<=itmax && K(j,i-1)/K(j,1)>0.1
         past=past+stepsize;
  
-        [Kcurrent,~,Embolized{j,i},Penetrated{j,i}]=sim.AirSeed(past,0,0);
+%         [Kcurrent,~,Embolized{j,i},Penetrated{j,i}]=sim.AirSeed(past,0,0);
+        [Kcurrent,~,gCondIt,gBipNodeIt, gCavIt] =...
+            AirSeed(gCondIt, gBipNodeIt, gCavIt , past,0,0, Ds);
 %         sim.plotNet
 %         text(20,52,strcat('\DeltaP=',num2str(past-0.1) ,' MPa'),...
 %             'FontSize',14,'FontWeight','bold')
@@ -46,16 +56,16 @@ while j<=jt
         
         if Kcurrent~=-1
             K(j,i)=Kcurrent;
-            embNb(j,i)=sum([sim.Conduits.Embolized]);
-            ncNb(j,i)=sum([sim.Conduits.NonConducting]);
-            embcond = sim.Conduits([sim.Conduits.Embolized]);
-            RWD(j,i) = sum([embcond.Length].*[embcond.Diameter].^2.*pi./4);
+%             embNb(j,i)=sum([sim.Conduits.Embolized]);
+%             ncNb(j,i)=sum([sim.Conduits.NonConducting]);
+%             embcond = sim.Conduits([sim.Conduits.Embolized]);
+%             RWD(j,i) = sum([embcond.Length].*[embcond.Diameter].^2.*pi./4);
         else
             K(j,i)=K(j,i-1);
-            embNb(j,i)=sum([sim.Conduits.Embolized]);
-            ncNb(j,i)=sum([sim.Conduits.NonConducting]);
-            embcond = sim.Conduits([sim.Conduits.Embolized]);
-            RWD(j,i) = sum([embcond.Length].*[embcond.Diameter].^2.*pi./4);
+%             embNb(j,i)=sum([sim.Conduits.Embolized]);
+%             ncNb(j,i)=sum([sim.Conduits.NonConducting]);
+%             embcond = sim.Conduits([sim.Conduits.Embolized]);
+%             RWD(j,i) = sum([embcond.Length].*[embcond.Diameter].^2.*pi./4);
         end
         i=i+1;
         
@@ -63,12 +73,12 @@ while j<=jt
 %     im = im(:,:,1,1:i-1);
     %At failure, set all subsequent values to the one reached at failure
     %pressure
-    embNb(j,find(embNb(j,:)~=0,1,'last'):end) =...
-        embNb(j,find(embNb(j,:)~=0,1,'last'));
-    ncNb(j,find(ncNb(j,:)~=0,1,'last'):end) =...
-        ncNb(j,find(ncNb(j,:)~=0,1,'last'));
-    RWD(j,find(RWD(j,:)~=0,1,'last'):end) =...
-        RWD(j,find(RWD(j,:)~=0,1,'last'));
+%     embNb(j,find(embNb(j,:)~=0,1,'last'):end) =...
+%         embNb(j,find(embNb(j,:)~=0,1,'last'));
+%     ncNb(j,find(ncNb(j,:)~=0,1,'last'):end) =...
+%         ncNb(j,find(ncNb(j,:)~=0,1,'last'));
+%     RWD(j,find(RWD(j,:)~=0,1,'last'):end) =...
+%         RWD(j,find(RWD(j,:)~=0,1,'last'));
     j=j+1;
 end
 %Reset simulation for future use

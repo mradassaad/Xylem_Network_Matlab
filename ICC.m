@@ -25,7 +25,8 @@ classdef ICC < handle
         Fap %fraction of aperture area to membrane area
         Lp %Pit chamber depth (m)
         emax %Maximum membrane strain at air seeding
-
+        
+        Functional % Specifies whether it is connected to a conducting component
         Embolized %Specifies if embolized
         NonConducting %Specifies if isolated
         ASPcalcmethod %'Pore' or 'Stretching' 
@@ -49,6 +50,7 @@ classdef ICC < handle
                 obj.De=0;
                 obj.Nodes=0;
                 obj.ConConduits = Conduit.empty;
+                obj.Functional=false;
                 obj.Embolized=false;
                 obj.NonConducting=false;
                 obj.Fc = 0;
@@ -62,8 +64,9 @@ classdef ICC < handle
             else
                 obj.Nodes=Nodes;
                 obj.ConConduits = ConConduits; %The connected conduits
-                obj.OINodes=obj.OneIndexNodes(dimensions);
+                obj.OINodes=obj.LinearIndexNodes(dimensions);
                 obj.ASPcalcmethod = ASPcalcmethod;
+                obj.Functional = false;
                 obj.Embolized = false;
                 obj.NonConducting = false;
 
@@ -120,11 +123,12 @@ classdef ICC < handle
             obj.Km = Kmtemp*1e6; %m3.MPa-1.s-1
         end
         
-        function OINodes = OneIndexNodes(obj,dimensions)
+        function LINodes = LinearIndexNodes(obj,dimensions)
             %Convert conduit and pit matrices to equivalent positions in the new
             %numbering system
 %             OINodes=dimensions(1)*(obj.Nodes(:,2)-1)+obj.Nodes(:,1);
-            OINodes=sub2ind(dimensions,obj.Nodes(:,1),obj.Nodes(:,2));
+            LINodes=sub2ind(dimensions,obj.Nodes(:,1),obj.Nodes(:,2),...
+                obj.Nodes(:,3));
         end
         
         function OINodesShift = ShiftedOneIndexNodes(obj,dimensions,clusterColumns)
