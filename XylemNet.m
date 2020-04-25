@@ -17,9 +17,11 @@ classdef XylemNet < handle
     end
     
     properties (SetAccess = immutable)
-        Pc
-        Pe %Probability of node becoming vessel end
-        NPe %Probability of node becoming vessel beginning
+        Pe_rad
+        Pe_tan
+        Pc %Probability of node becoming vessel end
+        NPc %Probability of node becoming vessel beginning
+        radDist % Determines radial variations in vessel properties
         Size %dimension of the grid on which Conduits were created
         ConduitScheme
         EndWallScheme
@@ -37,7 +39,7 @@ classdef XylemNet < handle
     methods
         
         function obj = XylemNet(row, column, depth,...
-                Pe, NPe, Pc, Lce, Dc, Dc_cv, varargin)
+                Pc, NPc, Pe_rad, Pe_tan, radDist, Lce, Dc, Dc_cv, varargin)
             %Class constructor
             
             %Parse required inputs
@@ -52,24 +54,30 @@ classdef XylemNet < handle
             addRequired(reqInputs,'row',@(x) validPosNum(x));
             addRequired(reqInputs,'column',@(x) validPosNum(x));
             addRequired(reqInputs,'depth',@(x) validPosNum(x));
-            addRequired(reqInputs,'Pe',@(x) validPosNum(x) ...
-                && x<=1);
-            addRequired(reqInputs,'NPe',@(x) validPosNum(x) ...
-                && x<=1);
             addRequired(reqInputs,'Pc',@(x) validPosNum(x) ...
-                && isscalar(x) && x<=1);
+                && length(x) == 2 && all(x<=1));
+            addRequired(reqInputs,'NPc',@(x) validPosNum(x) ...
+                && length(x) == 2 && all(x<=1));
+            addRequired(reqInputs,'Pe_rad',@(x) validPosNum(x) ...
+                && length(x) == 2 && all(x<=1));
+            addRequired(reqInputs,'Pe_tan',@(x) validPosNum(x) ...
+                && length(x) == 2 && all(x<=1));
+            addRequired(reqInputs,'radDist',@(x) validPosNum(x) ...
+                && length(x) == column && all(x<=1));
             addRequired(reqInputs,'Lce',@(x) validPosNum(x)); %meters
             addRequired(reqInputs,'Dc',@(x) validPosNum(x) ...
                 && isscalar(x) && x<200e-6 && x>1e-6); %meters
             addRequired(reqInputs,'Dc_cv',@(x) validPosNum(x) ...
                 && isscalar(x));
             parse(reqInputs, row, column, depth,...
-                Pe, NPe, Pc, Lce, Dc, Dc_cv);
+                Pc, NPc, Pe_rad, Pe_tan, radDist, Lce, Dc, Dc_cv);
             
             obj.Size = [row column depth];
+            obj.Pe_rad = Pe_rad;
+            obj.Pe_tan = Pe_tan;
             obj.Pc = Pc;
-            obj.Pe = Pe;
-            obj.NPe = NPe;
+            obj.NPc = NPc;
+            obj.radDist = radDist;
             
             %Parse optional inputs
             optInputs = inputParser;
@@ -112,15 +120,16 @@ classdef XylemNet < handle
             ASPcalcmethod = optInputs.Results.ASPcalcmethod;
             %Generate Conduits with constant conduit element length
             [obj.Conduits,obj.ConSorted,obj.CBProw,obj.CBPcol] =...
-                generateConduits(obj.Size,Lce,obj.Pe,obj.NPe);
+                generateConduits(obj.Size,Lce,obj.Pc,obj.NPc, obj.radDist);
             
             %Generate ICCs and add to corresponding conduits
             %First determine potential connections defined as any two
             %adjacent nodes that are part of different conduits
-            potConx = findConx(obj.Conduits,obj.Size(1));
+            [potConx_rad, potConx_tan] = findConx(obj.Conduits,obj.Size(1));
             %Choose potential connections randomly depending on
             %prescribed probability Pc
-            pickedConx = pickConx(potConx,obj.Pc);
+            pickedConx = pickConx(potConx_rad, potConx_tan,...
+                obj.Pe_rad ,obj.Pe_tan, obj.radDist);
             %Save that array in case we need to create a new xylem
             %network with the same ICC positions
             obj.pickedConx = pickedConx;
@@ -169,7 +178,8 @@ classdef XylemNet < handle
             %number of connected conduits and number of inter-conduit
             %connections
             for i=1:length(obj.Conduits)
-                obj.Conduits(i).addConConduits;
+                obj.Conduits(i).ConConduits =...
+                    obj.gCav.Nodes{neighbors(obj.gCav, i),'ConduitObj'};
                 obj.Conduits(i).updateConduit;
             end
             %Now area can be calculated and then conductance and similar
@@ -190,6 +200,8 @@ classdef XylemNet < handle
             %Figure out the minimum ASP with every connected conduit
             for i=1:length(obj.Conduits)
                 obj.Conduits(i).addConConduitASP;
+%                 gCav.Edges{obj.gCav.Edges{:,'EndNodes'}(:,1) == i, 'EndNodes'}(:,2)
+%                     ;
             end
             
             % update gCond Weights
@@ -206,14 +218,17 @@ classdef XylemNet < handle
             obj.gCond.Edges{iccIdx,"Weight"} = iccKs';
             
             % update gCav Weights
-            for i = 1 : height(obj.gCav.Edges)
-                endNodes = obj.gCav.Edges{i,"EndNodes"};
-                cond1 = obj.gCav.Nodes{endNodes(1),"ConduitObj"};
-                cond2 = obj.gCav.Nodes{endNodes(2),"ConduitObj"};
-                obj.gCav.Edges{i, "Weight"} =...
-                    cond1.ConConduitASP(cond1.ConConduits == cond2);
-            end
             
+            endNodes = obj.gCav.Edges{:,"EndNodes"};
+            cond1 = obj.gCav.Nodes{endNodes(:, 1),"ConduitObj"};
+            cond2 = obj.gCav.Nodes{endNodes(:, 2),"ConduitObj"};
+            weights = zeros(height(obj.gCav.Edges),1);
+            for i = 1 : height(obj.gCav.Edges)
+                findConCond = cond1(i).ConConduits == cond2(i);
+                weights(i) =...
+                    cond1(i).ConConduitASP(findConCond);
+            end
+            obj.gCav.Edges{:, "Weight"} = weights;
             %Save organ border area and conductivity
             x = obj.Size(1):obj.Size(1):(obj.Size(2)*obj.Size(3))*obj.Size(1);
             obj.Kend=zeros(1,obj.Size(2)*obj.Size(3));
@@ -239,9 +254,9 @@ classdef XylemNet < handle
                 [obj.getD(1); obj.getD(2); obj.getD(3); obj.getD(4)];
             
             %Specify redundant conduits and corresponding nodes
-            [~, condIdx] = redundancyCheck(obj.gCond, obj.gBipNode, obj.gCav);
-            [obj.gCond, obj.gBipNode, obj.gCav] =...
-                updateRedundancy(obj.gCond, obj.gBipNode, obj.gCav, condIdx);
+%             [~, condIdx] = redundancyCheck(obj.gCond, obj.gBipNode, obj.gCav);
+%             [obj.gCond, obj.gBipNode, obj.gCav] =...
+%                 updateRedundancy(obj.gCond, obj.gBipNode, obj.gCav, condIdx);
         end
         
         %Network properties with embolization

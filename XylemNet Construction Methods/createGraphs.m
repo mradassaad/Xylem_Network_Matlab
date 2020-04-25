@@ -141,8 +141,6 @@ gBipNode = rmnode(gBipNode,idRm);
 clear idRm bins binsizes compRm
 
 % Create graph associating ICCs to their respective conduits
-
-condTable = gCond.Edges;
 idConduits = gBipNode.Nodes.Type == "Conduit";
 condArray = gBipNode.Nodes{idConduits, 'ConduitObj'};
 condIsInlet = gBipNode.Nodes{idConduits, 'isInlet'};
@@ -154,30 +152,44 @@ NodeTableConConduit = table(condArray , condIsInlet, condIsOutlet,...
     component, condIsIsolated, condIsEmbolized,...
     'VariableNames', {'ConduitObj' 'isInlet' 'isOutlet'...
     'component' 'isRedundant' 'isEmbolized'});
-funcIdx = find(condTable.Type == "ICC");
-s = zeros(1, length(funcIdx));
-t = zeros(1, length(funcIdx));
-for i = 1:length(funcIdx)
-    endNodes = condTable{funcIdx(i), 'EndNodes'}; 
-    
-    cond1 = gBipNode.Nodes{neighbors(gBipNode, endNodes(1)), 'ConduitObj'};
-    cond2 = gBipNode.Nodes{neighbors(gBipNode, endNodes(2)), 'ConduitObj'};
-    
-    cond1Idx = find(NodeTableConConduit{:, 1} == cond1, 1);
-    cond2Idx = find(NodeTableConConduit{:, 1} == cond2, 1);
-    
-    s(i) = cond1Idx;
-    t(i) = cond2Idx;
-end
+%Adcacency matrix for gBipNode
+gBNAdj = adjacency(gBipNode);
+%Adjacency matrix for gCond and padded to match the size of gBNAdj
+gCAdjM = adjacency(addnode(gCond,numnodes(gBipNode)-numnodes(gCond)));
+%Find walks of length 3 (page 131 M. Newmann) between conduits: conduits ->
+%node -> node -> conduit.
+walk3=gBNAdj*gCAdjM*gBNAdj;
+walk3=walk3(numnodes(gCond)+1:end,numnodes(gCond)+1:end);
+%remove walks from conduit to itself (self-edges).
+walk3 = walk3 - diag(diag(walk3));
+[s, t] = ind2sub(size(walk3),find(walk3));
+weights = zeros(1, length(s));
+ICCs = cell(1, length(s));
+EdgeTableConConduit = table([s t], weights', ICCs',...
+    'VariableNames', {'EndNodes' 'Weight' 'ICCs'});
 
 %Reduce multigraph to simple graph
-gCav = simplify(graph(s, t, zeros(1, length(s)), NodeTableConConduit));
+gCav = simplify(graph(EdgeTableConConduit, NodeTableConConduit));
+
+% conCon = [gCav.Nodes{gCav.Edges{:,'EndNodes'}(:,1),'ConduitObj'}...
+%     gCav.Nodes{gCav.Edges{:,'EndNodes'}(:,2),'ConduitObj'}];
+% iccObjs= gCond.Edges{gCond.Edges{:,"Type"}=="ICC",'ICCObj'};
+% iccConCons =[iccObjs.ConConduits];
+% iccConCons=[iccConCons(1:2:end)' iccConCons(2:2:end)'];
+% [BOOL,LOC] = ismember(iccConCons, conCon, 'rows');
+% if ~any(BOOL)
+%     error("Some ICCs not found")
+% end
+% for i = 1:height(gCav.Edges)
+%     gCav.Edges{i,'ICCs'} = {iccObjs(LOC == i)'};
+% end
 clear NodeTableConConduit funcIdx condTable condArray condIsInlet...
     condIsOutlet i s t endNodes cond1 cond2 cond1Idx cond2Idx
 
 % Remove conduits with degree 1 and not an inlet or an outlet.
 idRmCond = find(degree(gCav) == 1 & gCav.Nodes{:,'isInlet'} == false &...
     gCav.Nodes{:,'isOutlet'} == false);
+
 while ~isempty(idRmCond)
    gCav = rmnode(gCav, idRmCond); 
    %Need to shit the index by the number of nodes so we actually remove
@@ -219,10 +231,8 @@ end
 gCav.Nodes{:,'component'} = bins';
 maxNode = length(find(~funcIdx));
 gBipNode.Nodes{funcIdx, 'component'} = bins';
-for i = 1 : maxNode
-    gBipNode.Nodes{i,'component'} =...
-        gBipNode.Nodes{neighbors(gBipNode, i), 'component'};
-end
+gBipNode.Nodes{gBipNode.Edges{:,'EndNodes'}(:,1),'component'} =...
+    gBipNode.Nodes{gBipNode.Edges{:,'EndNodes'}(:,2),'component'};
 gCond.Nodes{:, 'component'} = gBipNode.Nodes{1:maxNode,'component'};
 
 end

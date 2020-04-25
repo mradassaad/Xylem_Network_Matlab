@@ -47,7 +47,7 @@ while j<=jt
 %         [Kcurrent,~,Embolized{j,i},Penetrated{j,i}]=sim.AirSeed(past,0,0);
         [Kcurrent,~,gCondIt,gBipNodeIt, gCavIt] =...
             AirSeed(gCondIt, gBipNodeIt, gCavIt , past,0,0, Ds);
-%         sim.plotNet
+%         vizCond(gCondIt)
 %         text(20,52,strcat('\DeltaP=',num2str(past-0.1) ,' MPa'),...
 %             'FontSize',14,'FontWeight','bold')
 %         ylim([0 55])
@@ -69,6 +69,7 @@ while j<=jt
         end
         i=i+1;
         
+%         vizCond(gCondIt);
     end
 %     im = im(:,:,1,1:i-1);
     %At failure, set all subsequent values to the one reached at failure

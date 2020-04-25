@@ -1,9 +1,9 @@
 net = sim;
 %jt: number of VCs to be generated
-jt = 1;
+jt = 10;
 stepSize = 0.2; %MPa
 %itmax: max number of bubble pressure increases
-itmax = 16; 
+itmax = 25; 
 %inEmb: one initial embolism in every cluster
 inEmb = 2; 
 %AvgBool:

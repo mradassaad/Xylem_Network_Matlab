@@ -1,9 +1,24 @@
 function [Conduits,SortedConduits,CBProw,CBPcol] =...
-    generateConduits(NetSize,Lce,Pc,NPc)
+    generateConduits(NetSize, Lce, Pc, NPc, radDist)
+
+%Pc and NPc are now arrays with two elements, where the first element
+%refers to the conduits closes to the pith and the second to the conduits
+%farthest radially. 
+%radDist specifies how the radial profile of the vessel lengths should
+%vary, radDist has the size as 'column' or NetSize(2). Where it is 1, it is
+%closest to the pith, where it is 0, it is farthest radially.
 
 %Probability of a node being the start\end of a conduit
-CondStart = rand(NetSize(1)+50, NetSize(2), NetSize(3))<(1-NPc);
-CondEnd = rand(NetSize(1)+50, NetSize(2), NetSize(3))<(1-Pc);
+nPcRad = (radDist*NPc(1) + (1- radDist)*NPc(2));
+CondStart = arrayfun(@(x) rand(NetSize(1)+50, 1, NetSize(3))<(1-nPcRad(x)), 1: NetSize(2),...
+    'UniformOutput', false);
+CondStart = cat(2, CondStart{:});
+
+PcRad = (radDist*Pc(1) + (1- radDist)*Pc(2));
+CondEnd = arrayfun(@(x) rand(NetSize(1)+50, 1, NetSize(3))<(1-PcRad(x)), 1: NetSize(2),...
+    'UniformOutput', false);
+CondEnd = cat(2, CondEnd{:});
+
 %Eliminate vessel number skewness toward upstream end by truncating
 tempStart = zeros(1, NetSize(2), NetSize(3));
 for j = 1 : NetSize(3)
