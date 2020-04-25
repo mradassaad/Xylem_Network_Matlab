@@ -8,7 +8,6 @@ classdef Conduit < handle
         lastOINode
         Functional %Logical that specifies if the conduit is part of a
         %functional cluster
-        Cluster %Specifies which cluster this conduit belongs to
         Diameter %meters
         ConConduits %conduits connected to this one
         ConConduitASP %minimum ASP with each conduit
@@ -49,7 +48,6 @@ classdef Conduit < handle
                 obj.CEs = CondElem.empty;
                 obj.ICConnections = ICC.empty;
                 obj.Functional = false;
-                obj.Cluster = Cluster.empty();
                 obj.Embolized = false;
                 obj.NonConducting = false;
                 obj.Kce = 0;
@@ -62,20 +60,20 @@ classdef Conduit < handle
                 
                 %Include nodes
                 %Create nodes matrix
-                obj.Nodes=zeros(length(cellElem)+1,2);
+                obj.Nodes=zeros(length(cellElem)+1,3);
                 
                 for k=1:length(obj.CEs)
-                    obj.Nodes(k,:)=cellElem(k).Nodes(1,:);
+                    obj.Nodes(k,:)=cellElem(k).Nodes(1,:,:);
                 end
-                obj.Nodes(end,:)=cellElem(end).Nodes(2,:);
+                obj.Nodes(end,:)=cellElem(end).Nodes(2,:,:);
                 %Determine if this conduit is a water inlet for the segment
-                if obj.Nodes(1,1) == 1
+                if obj.Nodes(1,1,1) == 1
                     obj.isInlet = true;
                 else
                     obj.isInlet = false;
                 end
                 %Determine if this conduit is a water outlet for the segment
-                if obj.Nodes(end,1) == netSize(1)
+                if obj.Nodes(end,1,1) == netSize(1)
                     obj.isOutlet = true;
                 else
                     obj.isOutlet = false;
@@ -96,11 +94,10 @@ classdef Conduit < handle
                 
                 obj.ICConnections=ICC.empty;
                 obj.Functional=false;
-                obj.Cluster=Cluster.empty();
                 obj.Embolized=false;
                 obj.NonConducting=false;
                 obj.Kce=obj.CEs(1).Kce;
-                obj.OINodes=obj.OneIndexNodes(netSize);
+                obj.OINodes=obj.LinearIndexNodes(netSize);
                 obj.firstOINode=obj.OINodes(1);
                 obj.lastOINode=obj.OINodes(end);
                 obj.netSize = netSize;
@@ -111,6 +108,7 @@ classdef Conduit < handle
             obj.ICCCount=length(obj.ICConnections);
             obj.NConConduits=length(obj.ConConduits);
         end
+        
         function updateDiameter(obj,dia)
             if obj.CEs(1).Diameter == 0
                 arrayfun(@(x) x.updateDiameter(dia),obj.CEs);
@@ -171,7 +169,7 @@ classdef Conduit < handle
                 
                 obj.Length = obj.CEs(1).Length*obj.CECount; %m
                 
-                obj.OINodes=obj.OneIndexNodes(obj.netSize);
+                obj.OINodes=obj.LinearIndexNodes(obj.netSize);
                 obj.firstOINode=obj.OINodes(1);
                 obj.lastOINode=obj.OINodes(end);
         end
@@ -183,34 +181,20 @@ classdef Conduit < handle
             number = length(obj.ICConnections);
         end
         
-        function OINodes = OneIndexNodes(obj,dimensions)
+        function LINodes = LinearIndexNodes(obj,dimensions)
             %Convert conduit and pit matrices to equivalent positions in the new
             %numbering system
-            OINodes=sub2ind(dimensions,obj.Nodes(:,1),obj.Nodes(:,2));
+            LINodes=sub2ind(dimensions,...
+                obj.Nodes(:,1),obj.Nodes(:,2),obj.Nodes(:,3));
         end
         
-        function OINodesShift = ShiftedOneIndexNodes(obj,dimensions,clusterColumns)
-            %Convert conduit and pit matrices to equivalent positions in the new
-            %numbering system inside clusters
-            OINodesShift=dimensions(1)*((obj.Nodes(:,2)-clusterColumns(1)+1)-1)+obj.Nodes(:,1);
+        function LINodesShift = ShiftedOneIndexNodes(obj,dimensions,clusterColumns)
+            %Convert conduit and pit matrices to equivalent positions in
+            %linear index
+            LINodesShift = dimensions(1)*((obj.Nodes(:,2) - ...
+                clusterColumns(1)+1)-1)+obj.Nodes(:,1);
         end
-        
-%         function Input = isinput(obj)
-%             %Returns 1 if this conduit is an input
-%             if obj.Nodes(1,1)==1
-%                 Input=1;
-%             else
-%                 Input=0;
-%             end
-%         end
-%         
-%         function Output = isoutput(obj,dim)
-%             if obj.Nodes(end,1)==dim(1)
-%                 Output=1;
-%             else
-%                 Output=0;
-%             end
-%         end
+       
         
         function Embolize(obj)
             obj.Embolized=true;
@@ -229,7 +213,6 @@ classdef Conduit < handle
         function Repair(obj)
             obj.Embolized=false;
             [obj.ICConnections.Embolized] = deal(false);
-%             arrayfun(@(x) x.Repair,[obj.ICConnections]);
         end
         
         function Integrate(obj)
@@ -237,99 +220,29 @@ classdef Conduit < handle
             [obj.ICConnections.NonConducting] = deal(false);
 %             arrayfun(@(x) x.Integrate,[obj.ICConnections]);
         end
-        
-        function addConConduits(obj)
-            if isempty(obj.ICConnections)
-                error('No Inter-Conduit Connections')
-            end
-            obj.ConConduits=Conduit.zeros(1,10);
-%             obj.ConConduitASP = zeros(1,10);
-            count=1;
-            if ~isempty(obj.ICConnections)
-                for i=1:length(obj.ICConnections)
-                    if obj.ICConnections(i).ConConduits(1)==obj && ...
-                            ~ismember(obj.ICConnections(i).ConConduits(2),obj.ConConduits)
-                        obj.ConConduits(count) = obj.ICConnections(i).ConConduits(2);
-                        %                         obj.ConConduitASP(count) = obj.ICConnections(i).ASP;
-                        count=count+1;
-                    elseif obj.ICConnections(i).ConConduits(1)==obj && ...
-                            ismember(obj.ICConnections(i).ConConduits(2),obj.ConConduits)
-%                         ind = find(obj.ICConnections(i).ConConduits(2) ==...
-%                             obj.ConConduits);
-                        %                         obj.ConConduitASP(ind) =...
-                        %                             min([obj.ConConduitASP(ind) obj.ICConnections(i).ASP]);
-                    elseif obj.ICConnections(i).ConConduits(2)==obj && ...
-                            ~ismember(obj.ICConnections(i).ConConduits(1),obj.ConConduits)
-                        obj.ConConduits(count) = obj.ICConnections(i).ConConduits(1);
-                        %                         obj.ConConduitASP(count) = obj.ICConnections(i).ASP;
-                        count=count+1;
-                    elseif obj.ICConnections(i).ConConduits(2)==obj && ...
-                            ismember(obj.ICConnections(i).ConConduits(1),obj.ConConduits)
-%                         ind = find(obj.ICConnections(i).ConConduits(1) == ...
-%                             obj.ConConduits);
-                        %                         obj.ConConduitASP(ind) =...
-                        %                             min([obj.ConConduitASP(ind) obj.ICConnections(i).ASP]);
-                    end
-                end
-            end
-            obj.ConConduits = obj.ConConduits(1:count-1);
-%             obj.ConConduitASP = obj.ConConduitASP(1:count-1);
-        end
+
         
         function addConConduitASP(obj)
             if isempty(obj.ICConnections)
                 error('No Inter-Conduit Connections')
             end
-            obj.ConConduits=Conduit.zeros(1,10);
-            obj.ConConduitASP = zeros(1,10);
-            obj.ConConduitNpit = zeros(1,10);
-            obj.ConConduitNpore = zeros(1,10);
-            count=1;
-            if ~isempty(obj.ICConnections)
-                for i=1:length(obj.ICConnections)
-                    if obj.ICConnections(i).ConConduits(1)==obj && ...
-                            ~ismember(obj.ICConnections(i).ConConduits(2),obj.ConConduits)
-                        obj.ConConduits(count) = obj.ICConnections(i).ConConduits(2);
-                        obj.ConConduitASP(count) = obj.ICConnections(i).ASP;
-                        obj.ConConduitNpit(count) = obj.ICConnections(i).Npit;
-                        obj.ConConduitNpore(count) = obj.ICConnections(i).Npore;
-                        count=count+1;
-                    elseif obj.ICConnections(i).ConConduits(1)==obj && ...
-                            ismember(obj.ICConnections(i).ConConduits(2),obj.ConConduits)
-                        ind = find(obj.ICConnections(i).ConConduits(2) ==...
-                            obj.ConConduits);
-                        obj.ConConduitASP(ind) =...
-                            min([obj.ConConduitASP(ind) obj.ICConnections(i).ASP]);
-                        obj.ConConduitNpit(ind) = obj.ConConduitNpit(ind)+...
-                            obj.ICConnections(i).Npit;
-                        obj.ConConduitNpore(ind) = obj.ConConduitNpore(ind)+...
-                            obj.ICConnections(i).Npore;
-                    elseif obj.ICConnections(i).ConConduits(2)==obj && ...
-                            ~ismember(obj.ICConnections(i).ConConduits(1),obj.ConConduits)
-                        obj.ConConduits(count) = obj.ICConnections(i).ConConduits(1);
-                        obj.ConConduitASP(count) = obj.ICConnections(i).ASP;
-                        obj.ConConduitNpit(count) = obj.ICConnections(i).Npit;
-                        obj.ConConduitNpore(count) = obj.ICConnections(i).Npore;
-                        count=count+1;
-                    elseif obj.ICConnections(i).ConConduits(2)==obj && ...
-                            ismember(obj.ICConnections(i).ConConduits(1),obj.ConConduits)
-                        ind = find(obj.ICConnections(i).ConConduits(1) == ...
-                            obj.ConConduits);
-                        obj.ConConduitASP(ind) =...
-                            min([obj.ConConduitASP(ind) obj.ICConnections(i).ASP]);
-                        obj.ConConduitNpit(ind) = obj.ConConduitNpit(ind)+...
-                            obj.ICConnections(i).Npit;
-                        obj.ConConduitNpore(ind) = obj.ConConduitNpore(ind)+...
-                            obj.ICConnections(i).Npore;
-                    end
-                end
+            len = length(obj.ConConduits);
+            obj.ConConduitASP = zeros(1,len);
+            obj.ConConduitNpit = zeros(1,len);
+            obj.ConConduitNpore = zeros(1,len);
+%             count=1;
+            
+            for i = 1 : len
+                %Which ICCs exist between those conduits
+               iccIdx =  ismember(obj.ICConnections, ...
+                   obj.ConConduits(i).ICConnections);
+               obj.ConConduitASP(i) = min([obj.ICConnections(iccIdx).ASP]);
+               obj.ConConduitNpit(i) = sum([obj.ICConnections(iccIdx).Npit]);
+               obj.ConConduitNpore(i) = sum([obj.ICConnections(iccIdx).Npore]);
             end
-            obj.ConConduits = obj.ConConduits(1:count-1);
-            obj.ConConduitASP = obj.ConConduitASP(1:count-1);
-            obj.ConConduitNpit = obj.ConConduitNpit(1:count-1);
-            obj.ConConduitNpore = obj.ConConduitNpore(1:count-1);
+
+            
         end
-        
     end
     
     
