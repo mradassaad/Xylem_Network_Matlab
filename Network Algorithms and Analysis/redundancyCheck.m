@@ -1,7 +1,8 @@
 function [nodeIdx, condIdx] = redundancyCheck(gCond, gBipNode, gCav, method)
-% This function returns the nodes and conduits that are redundant (through
+% method 'maxflow' returns the nodes and conduits that are redundant (through
 % which no flow goes even though they are conducting (not isolated or
-% embolized)
+% embolized).
+% method 'bf' returns isolated nodes and conduits
 
 if strcmp(method,'maxflow')
     

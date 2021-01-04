@@ -1,6 +1,6 @@
 function [gCondU, gBipNodeU, gCavU] = updateRedundancy(gCond, gBipNode, gCav, condIdx)
 % This function takes conduits indeces to list as redundant, updates gCav,
-% gBipNode, and nodes and edges in gCond
+% gBipNode, and nodes and edges in gCond. 
 gCondU = gCond;
 gBipNodeU = gBipNode;
 gCavU = gCav;

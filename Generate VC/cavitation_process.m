@@ -56,14 +56,14 @@ while j<=jt
         
         if Kcurrent~=-1
             K(j,i)=Kcurrent;
-%             embNb(j,i)=sum([sim.Conduits.Embolized]);
-%             ncNb(j,i)=sum([sim.Conduits.NonConducting]);
+            embNb(j,i)= sum(gCavIt.Nodes.isEmbolized);
+            ncNb(j,i)= sum(gCavIt.Nodes.isRedundant);
 %             embcond = sim.Conduits([sim.Conduits.Embolized]);
 %             RWD(j,i) = sum([embcond.Length].*[embcond.Diameter].^2.*pi./4);
         else
             K(j,i)=K(j,i-1);
-%             embNb(j,i)=sum([sim.Conduits.Embolized]);
-%             ncNb(j,i)=sum([sim.Conduits.NonConducting]);
+            embNb(j,i)= sum(gCavIt.Nodes.isEmbolized);
+            ncNb(j,i)= sum(gCavIt.Nodes.isRedundant);
 %             embcond = sim.Conduits([sim.Conduits.Embolized]);
 %             RWD(j,i) = sum([embcond.Length].*[embcond.Diameter].^2.*pi./4);
         end
@@ -74,10 +74,10 @@ while j<=jt
 %     im = im(:,:,1,1:i-1);
     %At failure, set all subsequent values to the one reached at failure
     %pressure
-%     embNb(j,find(embNb(j,:)~=0,1,'last'):end) =...
-%         embNb(j,find(embNb(j,:)~=0,1,'last'));
-%     ncNb(j,find(ncNb(j,:)~=0,1,'last'):end) =...
-%         ncNb(j,find(ncNb(j,:)~=0,1,'last'));
+    embNb(j,find(embNb(j,:)~=0,1,'last'):end) =...
+        embNb(j,find(embNb(j,:)~=0,1,'last'));
+    ncNb(j,find(ncNb(j,:)~=0,1,'last'):end) =...
+        ncNb(j,find(ncNb(j,:)~=0,1,'last'));
 %     RWD(j,find(RWD(j,:)~=0,1,'last'):end) =...
 %         RWD(j,find(RWD(j,:)~=0,1,'last'));
     j=j+1;
@@ -89,18 +89,18 @@ sim.RepairAll
 %Process data before outputting
 if size(K,1)>1 && ~AvgBool
     Kini=mean(K(:,1));
-    PLC=1-mean(K)./Kini;
+    PLC=100* (1-mean(K)./Kini);
     embNb=mean(embNb)./length(sim.Conduits);
     ncNb=mean(ncNb)./length(sim.Conduits);
     RWD = mean(RWD);
 elseif size(K,1)>1 && AvgBool
     Kini=K(:,1);
-    PLC=1-K./Kini;
+    PLC=100*(1-K./Kini);
     embNb=embNb./length(sim.Conduits);
     ncNb=ncNb./length(sim.Conduits);
 else
     Kini=mean(K(:,1));
-    PLC=1-K./Kini;
+    PLC=100*(1-K./Kini);
     embNb=embNb./length(sim.Conduits);
     ncNb=ncNb./length(sim.Conduits);
 end

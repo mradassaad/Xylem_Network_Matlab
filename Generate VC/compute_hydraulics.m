@@ -16,12 +16,12 @@ ceLength = gCond.Edges{ces(1),"CEObj"}.Length;
 Ktot = Fo/(Pi-Po); %conductance m3/MPa.s
 ktot = Ktot*(netHeight-1)*ceLength; %m4/MPa.s
 
-% D1 = Ds{1} ;A1 = sum(pi*(D1(D1>0).^2)/4);
+D1 = Ds{1} ;A1 = sum(pi*(D1(D1>0).^2)/4);
 D2 = Ds{2} ;A2 = sum(pi*(D2(D2>0).^2)/4);
 D3 = Ds{3} ;A3 = sum(pi*(D3(D3>0).^2)/4);
-% D4 = Ds{4} ;A4 = sum(pi*(D4(D4>0).^2)/4);
+D4 = Ds{4} ;A4 = sum(pi*(D4(D4>0).^2)/4);
 
-ktot_xa = Ktot*(netHeight-1)*ceLength/ mean([A2,A3]);
+ktot_xa = Ktot*(netHeight-1)*ceLength/ mean([A1,A2,A3,A4]);
 %    mean([A1,A2,A3,A4]); %xylem area specific conductivity m2/MPa.s
 
 if exist('VAx', 'var')

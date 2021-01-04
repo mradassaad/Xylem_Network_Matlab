@@ -15,7 +15,8 @@ Pe_rad = [0.9 0.9];
 Pe_tan = [0.02 0.02];
 %radDist: It interpolates Pc and Pe values between vessel closest to the pith
 %(index 1) and those farthest (last element).
-radDist = [1 1 1  0.1 0.1 0.1 0.1 0.1 0.1 0.01];
+% radDist = [1 1 1  0.1 0.1 0.1 0.1 0.1 0.1 0.01];
+radDist = ones(1, colNb);
 %Lce is the length of a single conduit elements in meters
 Lce = 2.88e-3;
 %Dc is the average conduit diameter in meters
@@ -38,18 +39,20 @@ fpf = 0.7;
 fap = 0.06;
 %e_mean and e_cv are the mean and coefficient of variation of the normal distribution
 %from which membrane stretching limits are sampled. These are only used when 
-%BPPcalcmethod below is set to 'Stretching'.
+%ASPcalcmethod below is set to 'Stretching'.
 e_mean = 0.02;
 e_cv = 0.35;
-%Tm is the average thickness of membranes in meters.
+%Tm is the average thickness of membranes in meters ('Stretching').
 Tm = 234e-9;
-%Lp is the average pit chamber depth in meters.
+%Lp is the average pit chamber depth in meters ('Stretching').
 Lp = 654e-9;
-%BPPcalcmethod specifies whether the Bubble Propagation Pressure(BPP) is to be 
+%ASPcalcmethod specifies whether the Air Seeding Pressure(ASP) is to be 
 %prescribed by either the width of the largest pore or  membrane stretching.
 %Should be set to either 'Pore' or 'Stretching'.
-BPPcalcmethod = 'Pore';
+ASPcalcmethod = 'Pore';
+%Note: the 'Pore' ASPcalcmethod can also be used as a random ASP pore
+%generator to match VCs to each other.
 
 %sim will be the XylemNet object created using the parameters defined above
 sim = XylemNet(rowNb,colNb,depNb,Pc,NPc,Pe_rad,Pe_tan,radDist, Lce,Dc,Dc_cv,Dp,Dm,A,B,fc,fpf,fap,...
-      e_mean,e_cv,Tm,Lp,BPPcalcmethod);
+      e_mean,e_cv,Tm,Lp,ASPcalcmethod);

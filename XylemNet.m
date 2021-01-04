@@ -107,7 +107,7 @@ classdef XylemNet < handle
             parse(optInputs,varargin{:});
             
             Dp = optInputs.Results.Dp;
-            Dm = optInputs.Results.Dm;
+            Dc_m = optInputs.Results.Dm;
             k_ASP = optInputs.Results.k_ASP;
             lam_ASP = optInputs.Results.lam_ASP;
             Fc = optInputs.Results.Fc;
@@ -135,7 +135,7 @@ classdef XylemNet < handle
             obj.pickedConx = pickedConx;
             %With the chosen adjacent nodes, create ICC objects
             obj.ICConnections = ...
-                generateICCs(obj,Dp,Dm,k_ASP,lam_ASP,Fc,Fpf,Fap,Tm,Lp,...
+                generateICCs(obj,Dp,Dc_m,k_ASP,lam_ASP,Fc,Fpf,Fap,Tm,Lp,...
                 ASPcalcmethod);
             %Create graphs
             [obj.gCond, obj.gBipNode, obj.gCav] = createGraphs(obj);
@@ -150,10 +150,12 @@ classdef XylemNet < handle
             end
             
             %Sample conduit diameters from lognormal distribution
-            Dstd=Dc_cv*Dc; %m
-            Dm=log(Dc^2/sqrt(Dstd^2+Dc^2));
-            Ds=sqrt(log(Dstd^2/(Dc^2)+1));
-            Dcs=lognrnd(Dm,Ds,1,length(obj.Conduits));
+            Dc_std=Dc_cv*Dc; %m
+            Dc_m=log(Dc^2/sqrt(Dc_std^2+Dc^2));
+            Dc_s=sqrt(log(Dc_std^2/(Dc^2)+1));
+            Dcs=lognrnd(Dc_m,Dc_s,1,length(obj.Conduits));
+            % Comment out the next line for no length diameter coordination
+            % within a ring
             Dcs=sort(Dcs);
             tempLen=[obj.Conduits.Length];
             [~,ILen]=sort(tempLen);
@@ -198,10 +200,19 @@ classdef XylemNet < handle
                 obj.ICConnections(i).computeKmASP(es(I==i));
             end
             %Figure out the minimum ASP with every connected conduit
-            for i=1:length(obj.Conduits)
-                obj.Conduits(i).addConConduitASP;
-%                 gCav.Edges{obj.gCav.Edges{:,'EndNodes'}(:,1) == i, 'EndNodes'}(:,2)
-%                     ;
+            if isequal(ASPcalcmethod,'Only Structure')
+                for i=1:length(obj.Conduits)
+                    len = length(obj.Conduits(i).ConConduits);
+                    obj.Conduits(i).ConConduitASP =...
+                        wblrnd(k_ASP,lam_ASP,1,len);
+
+                end
+            else
+                for i=1:length(obj.Conduits)
+                    obj.Conduits(i).addConConduitASP;
+                    %                 gCav.Edges{obj.gCav.Edges{:,'EndNodes'}(:,1) == i, 'EndNodes'}(:,2)
+                    %                     ;
+                end
             end
             
             % update gCond Weights

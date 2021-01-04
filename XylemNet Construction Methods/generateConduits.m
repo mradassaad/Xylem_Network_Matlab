@@ -10,12 +10,12 @@ function [Conduits,SortedConduits,CBProw,CBPcol] =...
 
 %Probability of a node being the start\end of a conduit
 nPcRad = (radDist*NPc(1) + (1- radDist)*NPc(2));
-CondStart = arrayfun(@(x) rand(NetSize(1)+50, 1, NetSize(3))<(1-nPcRad(x)), 1: NetSize(2),...
+CondStart = arrayfun(@(x) rand(NetSize(1)+100, 1, NetSize(3))<(1-nPcRad(x)), 1: NetSize(2),...
     'UniformOutput', false);
 CondStart = cat(2, CondStart{:});
 
 PcRad = (radDist*Pc(1) + (1- radDist)*Pc(2));
-CondEnd = arrayfun(@(x) rand(NetSize(1)+50, 1, NetSize(3))<(1-PcRad(x)), 1: NetSize(2),...
+CondEnd = arrayfun(@(x) rand(NetSize(1)+100, 1, NetSize(3))<(1-PcRad(x)), 1: NetSize(2),...
     'UniformOutput', false);
 CondEnd = cat(2, CondEnd{:});
 
@@ -26,27 +26,27 @@ for j = 1 : NetSize(3)
         %Construct conduit at first row in this column if there exists a 1 in
         %the first 25 entries of the CondStart matrix at that column and the
         %corresponding entries of CondEnd are all 0.
-        if isempty(find(CondEnd(1:25,i,j),1)) &&...
-                ~isempty(find(CondStart(1:25,i,j),1))
+        if isempty(find(CondEnd(1:50,i,j),1)) &&...
+                ~isempty(find(CondStart(1:50,i,j),1))
             tempStart(1, i, j) = 1;
             %Construct conduit at first row in this column if there exists a 1 in
             %the first 25 entries of the CondStart matrix at that column that is in
             %a more advanced position than any 1 vaule in the corresponding entries
             %of CondEnd.
-        elseif ~isempty(find(CondStart(1:25, i, j),1)) &&...
-                find(CondEnd(1:25, i, j),1,'last') <...
-                find(CondStart(1:25, i, j),1,'last')
+        elseif ~isempty(find(CondStart(1:50, i, j),1)) &&...
+                find(CondEnd(1:50, i, j),1,'last') <...
+                find(CondStart(1:50, i, j),1,'last')
             tempStart(1, i, j) = 1;
         end
     end
 end
 %Truncate CondStart and CondEnd and change their values at the initial and
 %end row depending on the results of the for loop above
-CondStart = CondStart(26:end-25, :, :);
+CondStart = CondStart(51:end-50, :, :);
 CondStart(1, :, :) = tempStart;
 CondStart(end, :, :) = 0;
 
-CondEnd = CondEnd(26:end-25, :, :);
+CondEnd = CondEnd(51:end-50, :, :);
 CondEnd(1, :, :) = 0;
 CondEnd(end, :, :)=1;
 %Clean up the contruction matrix defined as CondStart + CondEnd.*-1 where a

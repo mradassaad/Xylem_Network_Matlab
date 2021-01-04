@@ -33,7 +33,7 @@ classdef ICC < handle
     end
     
     properties (Constant)
-        mu = 1.002e-3; %Pa.sd
+        mu = 1.002e-3; %Pa.s
         gamma = 0.072; %Pa
         E = 400; % Young's modulus of elasticity (MPa)
         v = 0.3; %Poisson ratio
@@ -96,7 +96,7 @@ classdef ICC < handle
                 *obj.Fc*obj.Fpf;
                 %total area occupied by a pore with microfibril strand
                 tf = 30e-9; %m - microfibril strand thickness (sperry hacke)
-                Apore = pi*(obj.Dp+tf)^2/4; %area of single pore (m2)
+                Apore = (obj.Dp+tf)^2; %area of single pore (m2)
                 obj.Npore = floor(obj.Am/(Apore));
 
                 Apit = obj.Dm^2; %area of single pit (m2)
@@ -115,6 +115,8 @@ classdef ICC < handle
                 obj.ASP = wblrnd(obj.A/obj.Npit^(1/obj.B),obj.B);
             elseif isequal(obj.ASPcalcmethod,'Thickness')
                 obj.ASP = ASPout;
+            elseif isequal(obj.ASPcalcmethod,'Only Structure')
+                obj.ASP = wblrnd(obj.A,obj.B);
             end
             obj.Dpm = 4*obj.gamma/obj.ASP * 1e-6; %m
             

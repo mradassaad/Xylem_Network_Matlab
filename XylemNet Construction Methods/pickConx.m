@@ -14,7 +14,7 @@ function Conx = pickConx(potConx_rad, potConx_tan, Pe_rad, Pe_tan, radDist)
        end
     end
     
-    for k=1:length(potConx_rad)
+    for k=1:length(potConx_tan)
        if Prob_tan(k)>=(1-mean(Pe_tan_rad(potConx_tan{k}(:,2)))) 
            Conx{count}=potConx_tan{k};
            count=count+1;
