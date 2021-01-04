@@ -22,4 +22,8 @@ sccprj/
 # Simulink autosave extension
 *.autosave
 
+# Testing code
+Testing/
 
+# Images
+Images/
