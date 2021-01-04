@@ -22,8 +22,8 @@ sccprj/
 # Simulink autosave extension
 *.autosave
 
-# Testing code
+# Testing folder
 Testing/
 
-# Images
+# Images folder
 Images/
